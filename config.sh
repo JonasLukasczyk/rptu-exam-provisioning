@@ -15,5 +15,5 @@ MANAGER_URL='http://131.246.17.85:3000'
 ANSWER_URL="${MANAGER_URL}/installer/answer"
 
 # exam-agent
-AGENT_REPO='https://github.com/JonasLukasczyk/proxmox-agent'
+AGENT_REPO='https://github.com/JonasLukasczyk/exam-agent'
 AGENT_PASSWORD='aaaaaaaa'

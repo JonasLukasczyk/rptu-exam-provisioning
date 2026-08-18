@@ -100,7 +100,15 @@ apt-get update
 apt-get install -y \
     git \
     nodejs \
-    npm
+    npm \
+    sudo \
+    xorg \
+    xinit \
+    x11-utils \
+    virt-viewer \
+    jq \
+    gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good
 
 
 #
@@ -117,6 +125,9 @@ if ! id "$AGENT_USER" >/dev/null 2>&1; then
         --shell /bin/bash \
         "$AGENT_USER"
 fi
+
+# Allow the agent to read /etc/pve/pve-root-ca.pem.
+usermod -aG www-data "$AGENT_USER"
 
 echo "${AGENT_USER}:${AGENT_PASSWORD}" | chpasswd
 
@@ -137,7 +148,30 @@ cd /opt/exam-agent
 
 npm install
 
+# The agent owns its application directory.
 chown -R "$AGENT_USER:$AGENT_USER" /opt/exam-agent
+
+# show-vm.sh is executed as root through sudo.
+# It must therefore not be writable by exam-agent.
+chown root:root /opt/exam-agent/show-vm.sh
+chmod 0755 /opt/exam-agent/show-vm.sh
+
+
+#
+# ---------------------------------------------------------------------------
+# SHOW-VM PERMISSIONS
+# ---------------------------------------------------------------------------
+#
+
+echo "Configuring show-vm permissions..."
+
+cat > /etc/sudoers.d/exam-agent <<'EOF'
+exam-agent ALL=(root) NOPASSWD: /opt/exam-agent/show-vm.sh *
+EOF
+
+chmod 0440 /etc/sudoers.d/exam-agent
+
+visudo -cf /etc/sudoers.d/exam-agent
 
 
 #
@@ -146,15 +180,18 @@ chown -R "$AGENT_USER:$AGENT_USER" /opt/exam-agent
 # ---------------------------------------------------------------------------
 #
 
+echo "Writing exam-agent configuration..."
+
 mkdir -p /etc/exam-agent
 
 cat > /etc/exam-agent/config <<EOF
 MANAGER_URL=$MANAGER_URL
 EOF
 
-chown -R "$AGENT_USER:$AGENT_USER" /etc/exam-agent
-
+chown root:"$AGENT_USER" /etc/exam-agent
 chmod 0750 /etc/exam-agent
+
+chown root:"$AGENT_USER" /etc/exam-agent/config
 chmod 0640 /etc/exam-agent/config
 
 
@@ -164,11 +201,14 @@ chmod 0640 /etc/exam-agent/config
 # ---------------------------------------------------------------------------
 #
 
+echo "Installing exam-agent systemd service..."
+
 cat > /etc/systemd/system/exam-agent.service <<EOF
 [Unit]
 Description=Exam Agent
-After=network-online.target
+After=network-online.target pve-cluster.service
 Wants=network-online.target
+Requires=pve-cluster.service
 
 [Service]
 Type=simple
@@ -176,9 +216,9 @@ User=$AGENT_USER
 Group=$AGENT_USER
 
 WorkingDirectory=/opt/exam-agent
-Environment=MANAGER_URL=$MANAGER_URL
+EnvironmentFile=/etc/exam-agent/config
 
-ExecStart=/usr/bin/npm start
+ExecStart=/usr/bin/node /opt/exam-agent/index.js
 
 Restart=always
 RestartSec=5
@@ -189,6 +229,20 @@ EOF
 
 systemctl daemon-reload
 systemctl enable exam-agent.service
+
+
+#
+# ---------------------------------------------------------------------------
+# CLEANUP
+# ---------------------------------------------------------------------------
+#
+
+echo "Cleaning up setup state..."
+
+# Remove files from any previous/manual display setup.
+rm -f /root/.xinitrc
+rm -f /tmp/exam-xinitrc
+rm -f /tmp/exam-*.vv
 
 
 #
