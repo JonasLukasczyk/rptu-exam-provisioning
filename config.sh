@@ -12,8 +12,14 @@ OUTPUT_ISO="./iso/proxmox-exam-${IMAGE_VERSION}.iso"
 
 # Manager
 MANAGER_URL='http://131.246.17.85:3000'
-ANSWER_URL="${MANAGER_URL}/installer/answer"
+ANSWER_URL="${MANAGER_URL}/ProvisioningService.answer"
 
 # exam-agent
-AGENT_REPO='https://github.com/JonasLukasczyk/exam-agent'
+AGENT_REPO='https://github.com/JonasLukasczyk/rptu-exam-agent'
 AGENT_PASSWORD='aaaaaaaa'
+
+# PBS
+PBS_HOST="131.246.17.85"
+PBS_FINGERPRINT=""
+PVE_TOKEN_SECRET=""
+

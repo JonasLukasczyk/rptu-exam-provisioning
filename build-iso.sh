@@ -3,7 +3,6 @@ set -euo pipefail
 
 source ./config.sh
 
-
 #
 # ---------------------------------------------------------------------------
 # PATHS
@@ -33,9 +32,12 @@ echo "Generating exam-agent setup script..."
 export AGENT_REPO
 export MANAGER_URL
 export AGENT_PASSWORD
+export PBS_HOST
+export PBS_FINGERPRINT
+export PVE_TOKEN_SECRET
 
 envsubst \
-    '$AGENT_REPO $MANAGER_URL $AGENT_PASSWORD' \
+    '$AGENT_REPO $MANAGER_URL $AGENT_PASSWORD $PBS_HOST $PBS_FINGERPRINT $PVE_TOKEN_SECRET' \
     < ./exam-agent-setup.sh.template \
     > "$GENERATED_SETUP_SCRIPT"
 
